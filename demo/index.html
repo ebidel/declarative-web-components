@@ -1,0 +1,240 @@
+<html>
+<head>
+  <title>Declarative defined web components</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<h1>Author web components, declaratively</h1>
+
+<details>
+  <summary>Learn the background</summary>
+
+<p>An unfortunate property of web components is that the way you author a component
+is very different than the way you use a component. Authoring a web component involves
+writing a bunch of code in JavaScript. Using the component is much easier.
+The consumer declares some HTML and they're off to thre faces. The difference is
+being imperative vs. being declarative.</p>
+
+<blockquote>Declarative languages are easy to use, easy to adopt, and readers can
+  understand the structure of an app much quicker than groking code.</blockquote>
+
+<h4>What does it take to make a web component?</h4>
+
+<p>To define a <a href="https://developers.google.com/web/fundamentals/primers/customelements/" targe="_blank">custom element</a>, you create an ES6 class that extends <code>HTMLElement</code>.
+You can also attach <a href="https://developers.google.com/web/fundamentals/primers/shadowdom/" targe="_blank">Shadow DOM</a> in the constructor if you want to add features like style scoping and DOM encapsulation.
+The element's Shadow DOM can be created from cloning a declared <code>&lt;template></code> or more typically,
+from a string using <code>innerHTML</code>.</p>
+
+<p>The whole thing looks something like this:</p>
+
+<pre class="prettyprint">
+const tmpl = document.createElement('tmeplate');
+tmpl.innerHTML = `
+  &lt;style>
+    :host {
+      ...
+    }
+    div {
+      ...
+    }
+  &lt;/style>
+  &lt;div>
+    &lt;div>my-element: shadow dom content&lt;/div>
+    &lt;slot>&lt;/slot>
+  &lt;/div>`.trim();
+
+class MyElement extends HTMLElement {
+  constructor() {
+    super();
+
+    const clone = document.importNode(tmpl.content, true);
+    this.attachShadow({mode: 'open'}).appendChild(clone);
+  }
+  sayHi() {
+    console.log('hi');
+  }
+}
+
+window.customElements.define('my-element', MyElement);
+</pre>
+
+<p>Easy enough. But it's all code!</p>
+
+<p>Wouldn't it be nice if everything were declarative? In other words, what if you
+didn't have to write <b>any</b> code at all to define an encapsulated web component?
+As it turns out, that's trivial to do using web components!</p>
+
+<blockquote>We can author HTML by using (custom) HTML!</b> #inception</blockquote>
+</details>
+
+<h2>&lt;shadow-root></h2>
+
+<p><b>A declarative way to create Shadow DOM</b>. The <code>&lt;shadow-root></code> element
+creates Shadow DOM from a child <code>&lt;template></code> and attaches the shadow
+root to the parent element. In this example, <code>&lt;div id="shadow-host"></code>.</p>
+
+<section class="demo flex">
+  <div>
+     <h4>1. Declaring this:</h4>
+    <pre class="prettyprint">
+&lt;div id="shadow-host">
+  &lt;b slot="name">Eric's&lt;/b>
+  &lt;shadow-root>
+    &lt;template>
+      &lt;slot name="name">&lt;/slot> declarative shadow dom!
+    &lt;/template>
+  &lt;/shadow-root>
+&lt;/div></pre>
+  </div>
+  <div>
+    <h4>2. Results in this:</h4>
+    <div id="sd-simple-host">
+      <b slot="name">Eric's</b>
+      <shadow-root>
+        <template>
+          <slot name="name"></slot> declarative shadow dom!
+        </template>
+      </shadow-root>
+    </div>
+  </div>
+</section>
+
+<h2>&lt;custom-element-definition></h2>
+
+<p><b>A declarative way to define a custom element</b>. The element registers itself and
+only uses Shadow DOM if you include a top-level <code>&lt;shadow-root></code> child.</p>
+
+<h3>Example - custom element (no shadow dom)</h3>
+
+<p>Since this example does not use Shadow DOM, the composed DOM ends up entirely in "light DOM".</p>
+
+<!--
+Example:
+- Element does not use Shadow DOM
+- Element does not register itself. Page should called customElements.define('basic-element').
+-->
+<custom-element-definition name="basic-element">
+  <template>
+    <span>content appended by element's author (in light dom)</span>
+  </template>
+</custom-element-definition>
+
+<!--
+Example:
+- Element does not use Shadow DOM
+- Element does not register itself.
+- Element defines styles for its light dom.
+-->
+<!--<custom-element-definition name="basic-element-styles">
+  <template>
+    <style>
+      /* CSS selectors are prefixed/scoped b/c weren't not using shadow dom. */
+      basic-element h2 {
+        color: blue
+      }
+    </style>
+    <h2>basic-element: some content should be blue</h2>
+  </template>
+</custom-element-definition>-->
+
+<!--
+Example:
+- Element uses Shadow DOM
+- Element auto-registers itself by defining a script.
+-->
+<custom-element-definition name="my-element">
+  <shadow-root>
+    <template>
+      <style>
+        :host {
+          display: block;
+          color: red;
+        }
+        ::slotted(span) {
+          color: blue;
+        }
+      </style>
+      <div>
+        <b>click me (in shadow dom)</b><br>
+        <slot></slot>
+      </div>
+    </template>
+  </shadow-root>
+  <script>
+    (class extends HTMLElement {
+      constructor() {
+        super();
+        this.addEventListener('click', this.sayHi);
+      }
+      sayHi() {
+        alert('Hi!');
+      }
+    })
+  </script>
+</custom-element-definition>
+
+<section class="demo flex">
+  <div>
+     <h4>1. Declaring this:</h4>
+    <pre class="prettyprint"></pre>
+  </div>
+  <div>
+    <h4>2. Results in this:</h4>
+    <basic-element>
+      <div>user's content (in light dom)</div>
+    </basic-element>
+  </div>
+</section>
+
+<h3>Example - custom element with shadow dom</h3>
+
+<p>This custom element uses Shadow DOM, so the styles defined within it get scoped
+to the element and the DOM gets composed from both "light DOM" and "shadow DOM".</p>
+
+
+<section class="demo flex">
+  <div>
+    <h4>1. Declare this:</h4>
+    <pre class="prettyprint"></pre>
+  </div>
+  <div>
+    <h4>2. Use it like this:</h4>
+    <pre class="prettyprint">
+&lt;my-element>
+  &lt;span>user's content (in light dom)&lt;/span>
+&lt;/my-element>
+</pre>
+    <br>
+    <h4>3. Results in this:</h4>
+    <my-element>
+      <span>user's content (in light dom)</span>
+    </my-element>
+  </div>
+</section>
+
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?skin=sunburst" async></script>
+<script src="../elements.js"></script>
+<script>
+// Define a basic-element.
+const basicEl = document.querySelector('basic-element');
+window.customElements.define(basicEl.localName, class extends HTMLElement {
+  get sup() {
+    return 'sup!';
+  }
+});
+console.log(basicEl.sup); // try it.
+
+function fillCodeBlocks(selectors) {
+  selectors.forEach(selector => {
+    const el = document.querySelector(selector);
+    el.parentElement.parentElement.querySelector('pre').textContent = document.querySelector(
+        `custom-element-definition[name="${selector}"]`).outerHTML;
+  });
+}
+
+fillCodeBlocks(['basic-element', 'my-element']);
+</script>
+<script src="../tests.js"></script>
+</body>
+</html>
